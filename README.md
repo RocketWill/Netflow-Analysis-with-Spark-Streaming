@@ -1,10 +1,10 @@
 <a href="#zhcn">简体中文</a> | <a href="#zhtw">繁體中文</a><br>
 ***本次实验使用的数据皆来自作者自身设备***  
+<a id="zhcn"/>
 ## 实验说明：
 运用 Apache Spark Streaming (Structured Streaming) 分析网络流量，并输出至前端 Dashboard 展示  
   
 实验从两个面向对数据进行分析和处理：
-<a id="zhcn"/>
 #### 近实时分析
 1. 运用 pmacct 监控网络流量，将数据保存至 Kafka 中。
 2. 使用 ==Saprk Streaming== 消费 Kafka 的数据，最后根据需求  
@@ -493,8 +493,13 @@ For suggestions, critics, bugs, contact me: Paolo Lucente <paolo@pmacct.net>.
 
 ======
 
-<a id="zhtw"/>
- #### 近實時分析
+<a id="zhtw"/>  
+## 繁體中文
+## 实验说明：
+运用 Apache Spark Streaming (Structured Streaming) 分析网络流量，并输出至前端 Dashboard 展示  
+  
+实验从两个面向对数据进行分析和处理：  
+#### 近實時分析
 1. 運用 pmacct 監控網絡流量，將數據保存至 Kafka 中。
 2. 使用 ==Saprk Streaming== 消費 Kafka 的數據，最後根據需求  
     - 熱數據：寫入新的 Kafka Topic 中
