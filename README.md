@@ -1,5 +1,7 @@
+<a href="#zhcn">简体中文</a> | <a href="#zhtw">繁體中文</a><br>
 ***本次实验使用的数据皆来自作者自身设备***  
-## 实验说明：  
+<a id="zhcn"/>
+## 实验说明：
 运用 Apache Spark Streaming (Structured Streaming) 分析网络流量，并输出至前端 Dashboard 展示  
   
 实验从两个面向对数据进行分析和处理：
@@ -16,7 +18,12 @@
 2. 使用 ==Structured Streaming== 监控目录中的所有文件，将数据持久化至 MongoDB, Elasticsearch 中
 3. 前端展示：MongoDB, Elasticsearch 通过 Http 请求与前台通信
 ## 分析流程图
-
+![flow chart](https://raw.githubusercontent.com/RocketWill/Netflow-Analysis-with-Spark-Streaming/master/images/process_flow.png)
+## 成果展示
+##### Real Time Access Trend  
+![realtime access trend](https://raw.githubusercontent.com/RocketWill/Netflow-Analysis-with-Spark-Streaming/master/images/realtime-access-trend.gif)
+##### Date Access Trend  
+![date access trend](https://raw.githubusercontent.com/RocketWill/Netflow-Analysis-with-Spark-Streaming/master/images/date-access-trend.png)  
 ## Path1 近实时分析
 #### 使用的工具和技术
 1. pmacct
@@ -64,8 +71,10 @@ kafka_broker_port: 9092
 sudo pmacctd -f /path/to/config/file
 `  
 (-f 表示读取来自文件 的configuration)
-3. 运行画面
-4. 查看 Kafka Consumer
+3. 运行画面  
+![pmacctd collect](https://raw.githubusercontent.com/RocketWill/Netflow-Analysis-with-Spark-Streaming/master/images/pmacctd-collect.gif)
+4. 查看 Kafka Consumer  
+![kafka consumer](https://raw.githubusercontent.com/RocketWill/Netflow-Analysis-with-Spark-Streaming/master/images/kafka-consumer.gif)
 ##### 数据处理 & 持久化
 1. Spark Streaming 接入 Kafka  
 - 初始化  
@@ -143,8 +152,8 @@ process = targets.map(mapper)
 # 持久化至 MongoDB
 process.foreachRDD(lambda rdd: rdd.foreachPartition(sendMongoDB))
 ```
-- MongoDB 中的数据
-
+- MongoDB 中的数据  
+<img src="https://raw.githubusercontent.com/RocketWill/Netflow-Analysis-with-Spark-Streaming/master/images/mongoDB-data.png" width="350px" /> <br> 
 3. 输出至新的 Kafka Topic
 - 初始化
 
@@ -217,9 +226,9 @@ todo
 数据源是 MongoDB，依据日期统计当天的 inflow 和 outflow 数量（bytes），采用 HTTP 发送请求至后端获取数据，以叠加柱状图呈现。
 - Real Time Access Trend：  
 据源是 Kafka，前端通过 Websocket 实时获取后端消费 Kafka 的数据，每十秒更新一次，以动态折线图呈现。
-##### Date Access Trend
+##### Date Access Trend  
+![date access trend](https://raw.githubusercontent.com/RocketWill/Netflow-Analysis-with-Spark-Streaming/master/images/date-access-trend.png)  
 1. 原始数据 example：
-
 ```
 _id: 5dc7f01be2e1d339bf8bf686
 ip_src: "192.168.178.1"
@@ -334,8 +343,8 @@ port_dst: 22
       ]
 ```
 
-##### Real Time Access Trend
-
+##### Real Time Access Trend  
+![realtime access trend](https://raw.githubusercontent.com/RocketWill/Netflow-Analysis-with-Spark-Streaming/master/images/realtime-access-trend.gif)
 1. 创建 HTTP Server：  
 
 ```
@@ -480,4 +489,4 @@ For suggestions, critics, bugs, contact me: Paolo Lucente <paolo@pmacct.net>.
 - https://socket.io/
 - https://docs.mongodb.com/
 - https://www.echartsjs.com/
-- https://github.com/wurstmeister/kafka-docker/issues/534
+- https://github.com/wurstmeister/kafka-docker/issues/534]  
