@@ -257,14 +257,14 @@ streamingDF = streamingDF.withColumn("datetime", timestamp_convert(streamingDF['
 只截取部分信息：
 ```
 streamingDF = streamingDF.select(
-    streamingDF3['_source']['layers']['ip']['ip.dst'].alias('ip_dst'), \
-    streamingDF3['_source']['layers']['ip']['ip.src'].alias('ip_src'), \
-    streamingDF3['_source']['layers']['ip']['ip.version'].alias('ip_ver'), \
+    streamingDF['_source']['layers']['ip']['ip.dst'].alias('ip_dst'), \
+    streamingDF['_source']['layers']['ip']['ip.src'].alias('ip_src'), \
+    streamingDF['_source']['layers']['ip']['ip.version'].alias('ip_ver'), \
     
-    streamingDF3['_source']['layers']['frame']['frame.time_epoch'].alias('timestamp'), \
-    streamingDF3['_source']['layers']['tcp']['tcp.dstport'].alias('tcp_dstport'), \
-    streamingDF3['_source']['layers']['tcp']['tcp.flags'].alias('tcp_flags'), \
-    streamingDF3['_source']['layers']['tcp']['tcp.srcport'].alias('tcp_srcport'), 
+    streamingDF['_source']['layers']['frame']['frame.time_epoch'].alias('timestamp'), \
+    streamingDF['_source']['layers']['tcp']['tcp.dstport'].alias('tcp_dstport'), \
+    streamingDF['_source']['layers']['tcp']['tcp.flags'].alias('tcp_flags'), \
+    streamingDF['_source']['layers']['tcp']['tcp.srcport'].alias('tcp_srcport'), 
 )
 ```
 
