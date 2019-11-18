@@ -1,4 +1,4 @@
-<a href="#zhcn">简体中文</a> | <a href="#zhtw">繁體中文</a><br>
+<a href="#zhcn">简体中文</a> | 繁體中文(待)<br><br>
 ***本次实验使用的数据皆来自作者自身设备***  
 <a id="zhcn"/>
 ## 实验说明：
@@ -45,7 +45,7 @@
 4. Websocket
     - 用途：客户端与服务器端的持久连接。
     - 优点：由于部分数据需要实时传递给前端，而 HTTP 是非状态性的，每次都要重新传输；Websocket 只需要一次 HTTP 握手，整个通讯过程是建立在一次连接/状态中，避免了 HTTP 的非状态性，服务端会一直知道客户端信息，直到关闭请求。
-#### 系统实现
+#### 设计 & 实现
 ##### 数据采集
 1. 编写 pmacctd configuration 文件（pmacct 环境搭建在附录给出）  
     - example  
@@ -191,7 +191,7 @@ process.foreachRDD(sendKafka)
     - 优点：
         - Incremental query model：Structured Streaming 将会在新增的流式数据上不断执行增量查询，同时代码的写法和批处理 API （基于 Dataframe 和 Dataset API）完全一样。 
         - 复用 Spark SQL 执行引擎：Spark SQL 执行引擎做了非常多的优化工作，例如执行计划优化、codegen、内存管理等。使得 Structured Streaming 有高性能和高吞吐的能力。不同于 Spark Streaming 是基于 RDD 操作。
-#### 系统实现
+#### 设计 & 实现
 ##### 数据采集
 tcpdump 收集网络流量，example：
 
@@ -208,8 +208,120 @@ tcpdump -s 0 port -i eth0 -w mycap.pcap
 ##### （问题）
 由于 pcap 是二进制文件，目前还没找到比较理想的方式让 Spark 来读取，所以现在先用 tshark 将 pcap 文件转换成 json 格式，再作为 Structured Streaming 的数据源。
 ##### 数据处理 & 持久化
-todo
+1. 初始化
 
+```
+from pyspark.sql import SparkSession
+from pyspark import SparkConf,SparkContext
+conf = SparkConf().setAppName("LogAnalysisStructuredStream").setMaster('spark://127.0.0.1:7077')
+spark = SparkSession \
+    .builder \
+    .appName("LogAnalysisStructuredStream") \
+    .config(conf=conf) \
+    .getOrCreate()
+```
+2. 指定目标目录并设定 schema
+
+```
+streamingDF = (
+  spark
+    .readStream
+    .schema(schema)
+    .option("maxFilesPerTrigger", 1)
+    .option(......)
+    .json('./data', multiLine=True) # 待处理文件目录
+)
+```
+其中，option 参数
+
+```
+path: 输入路径，适用所有格式 
+maxFilesPerTrigger: 每次触发时，最大新文件数(默认：无最大) 
+latestFirst: 是否首先处理最新的文件，当有大量积压的文件时，有用（默认值：false) 
+fileNameOnly: 是否仅根据文件名而不是完整路径检查新文件（默认值：false）。
+```
+3. 使用自定义函数将 
+`
+timestamp: string
+`
+ 转换成 `TimestampType`，并整理出需要的信息。Structured Streaming 的优势是可以使用 Spark SQL 的语法对数据进行处理
+
+```
+from pyspark.sql.types import TimestampType
+from pyspark.sql.functions import udf
+
+timestamp_convert = udf (lambda time: datetime.float(time), TimestampType())
+streamingDF = streamingDF.withColumn("datetime", timestamp_convert(streamingDF['_source']['layers']['frame']['frame.time_epoch']))
+```
+
+只截取部分信息：
+```
+streamingDF = streamingDF.select(
+    streamingDF3['_source']['layers']['ip']['ip.dst'].alias('ip_dst'), \
+    streamingDF3['_source']['layers']['ip']['ip.src'].alias('ip_src'), \
+    streamingDF3['_source']['layers']['ip']['ip.version'].alias('ip_ver'), \
+    
+    streamingDF3['_source']['layers']['frame']['frame.time_epoch'].alias('timestamp'), \
+    streamingDF3['_source']['layers']['tcp']['tcp.dstport'].alias('tcp_dstport'), \
+    streamingDF3['_source']['layers']['tcp']['tcp.flags'].alias('tcp_flags'), \
+    streamingDF3['_source']['layers']['tcp']['tcp.srcport'].alias('tcp_srcport'), 
+)
+```
+
+处理过后的 schema  
+
+```
+# input：
+streamingDF.printSchema()
+
+# output：
+root
+ |-- ip_dst: string (nullable = true)
+ |-- ip_src: string (nullable = true)
+ |-- ip_ver: string (nullable = true)
+ |-- timestamp: string (nullable = true)
+ |-- tcp_dstport: string (nullable = true)
+ |-- tcp_flags: string (nullable = true)
+ |-- tcp_srcport: string (nullable = true)
+```
+4. 持久化至 MongoDB  
+
+```
+from pymongo import MongoClient
+def write2mongo(row):
+    client = MongoClient('localhost', 27017)
+    db = client['structured-stream']
+    collectionName = 'netflow'
+    collection = db[collectionName]
+    collection.insert_one({"ip_dst": row[0], "ip_src": row[1], "ip_ver": row[2], "timestamp": row[3], "tcp_dstport": row[4], "tcp_flags": row[5], "tcp_srcport": row[6]})
+```
+
+开始运行
+
+```
+streamingDF.writeStream.foreach(write2mongo)\
+.outputMode("append") \
+.trigger(processingTime='10 seconds') \
+.start()\
+.awaitTermination()
+```
+其中
+- trigger 有几种模式  
+流查询的 trigger 设置定义了流数据处理的时间，无论该查询是作为具有固定批处理间隔的微批查询，还是作为连续处理查询执行。 以下是受支持的各种触发器：
+    - 固定间隔微批：查询将以微批次模式执行，在该模式下，微批次将按用户指定的时间间隔启动。
+    - One-time micro-batch：将仅执行一个微批处理来处理所有可用数据，然后自行停止。
+    - Continuous with fixed checkpoint interval
+：查询将以新的低延迟，连续处理模式执行。
+
+- output 有几种模式
+
+```
+Complete mode: Result Table 全量输出
+Append mode (预设值): 只有 Result Table 中新增的行才会被输出，所谓新增是指自上一次 trigger 的时候。因为只是输出新增的行，所以如果老数据有改动就不适合使用这种模式。
+Update mode: 只要更新的 Row 都会被输出，相当于 Append mode 的加强版。
+```
+5. MongoDB 的数据  
+<img src="https://raw.githubusercontent.com/RocketWill/Netflow-Analysis-with-Spark-Streaming/master/images/mongoDB-data-structured-streaming.png" width="300px" /> <br> 
 ## 前端展示
 #### 使用的工具和技术
 1. 前端框架：React.js
@@ -220,7 +332,7 @@ todo
     - 用途：让 server 将最新的数据以最快的速度发送给 client
     - 介绍：WebSocket 是一种协议，是一种与 HTTP 同等的网络协议，两者都是应用层协议，基于 TCP。但是 WebSocket 是一种双向通信协议，在建立连接之后，WebSocket 的 server 与 client 都能主动向对方发送或接收数据。同时 WebSocket 在建立连接时需要借助 HTTP 协议，连接建立好了之后 client 与 server 之间的双向通信就与 HTTP 无关了。
     - Socket.IO：是一个封装了 Websocket、基于 Node 的 JavaScript 框架，包含 client 的 JavaScript 和 server 的 Node。当 Socket.IO 检测到当前环境不支持 WebSocket 时，能够自动地选择最佳的方式来实现网络的实时通信。
-#### 系统实现
+#### 设计 & 实现
 本次前端绘制两张图表，创建了两个服务器，一个用于处理 HTTP 请求；一个使用 Websocket 与前端通信：
 - Date Access Trend：  
 数据源是 MongoDB，依据日期统计当天的 inflow 和 outflow 数量（bytes），采用 HTTP 发送请求至后端获取数据，以叠加柱状图呈现。
@@ -259,7 +371,7 @@ port_dst: 22
 `
 192.168.178.80
 `
-为机器 IP
+为主机 IP
 
 
 ```
