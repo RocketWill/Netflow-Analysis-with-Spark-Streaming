@@ -31,6 +31,6 @@
     "express": "^4.16.4",
     "kafka-node": "^5.0.0",
     "mongodb": "^3.3.3",
-    "socket.io": "^2.3.0"
+    "socket.io": "^2.4.0"
   }
 }
