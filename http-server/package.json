@@ -28,7 +28,7 @@
     "@types/express": "^4.16.1",
     "axios": "^0.19.0",
     "cors": "^2.8.5",
-    "express": "^4.16.4",
+    "express": "^4.17.3",
     "kafka-node": "^5.0.0",
     "mongodb": "^3.3.3",
     "socket.io": "^2.3.0"
